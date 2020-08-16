@@ -1,10 +1,10 @@
-import { DocumentClient } from 'aws-sdk/clients/dynamodb';
 import Bluebird from 'bluebird';
 import DataLoader from 'dataloader';
 import stringify from 'json-stable-stringify';
 import { indexBy, is, mapObjIndexed, mergeRight, pick, pipe, prop } from 'ramda';
 
-import { batchGet } from './dynamodb';
+import storages from './storages';
+import { DataLoaderStorage } from './storages/storage-abstraction';
 
 export interface PersistentDataLoaderOptions<K, V> extends DataLoader.Options<K, V> {
   /**
@@ -19,6 +19,14 @@ export interface PersistentDataLoaderOptions<K, V> extends DataLoader.Options<K,
    * Do not use cached data from persistent storage and force overwrite it with new data.
    */
   forceUpdateCache?: boolean;
+  /**
+   * Persistent DataLoader storage implementation or the name of storage.
+   */
+  storage?: DataLoaderStorage | string;
+  /**
+   * Database name in storage to be used in case the storage option is storage name string.
+   */
+  databaseName?: string;
 }
 
 const pickDataloaderOptions = pick([
@@ -29,11 +37,13 @@ const pickDataloaderOptions = pick([
 
 export class PersistentDataLoader<K, V> implements DataLoader<K, V> {
   private storageLoader: DataLoader<K, V>;
+  private storageImpl: DataLoaderStorage;
   private options: PersistentDataLoaderOptions<K, V>;
 
   constructor(batchLoadFn: DataLoader.BatchLoadFn<K, V>, options?: PersistentDataLoaderOptions<K, V>) {
     const defaultOptions: PersistentDataLoaderOptions<K, V> = {
-      cacheKeyFn: k => is(Object, k) ? stringify(k) : k
+      cacheKeyFn: k => is(Object, k) ? stringify(k) : k,
+      storage: 'in-memory'
     };
     this.options = mergeRight(defaultOptions, options);
 
@@ -46,6 +56,12 @@ export class PersistentDataLoader<K, V> implements DataLoader<K, V> {
     const indexByKey = indexBy(prop('key')) as (list: KeyValueObj[]) => Record<keyof KeyValueObj, KeyValueObj>;
     const mapValues = mapObjIndexed<KeyValueObj, V>(prop('value'));
 
+    this.storageImpl = typeof this.options.storage === 'string' ? storages(this.options.storage, this.options) : this.options.storage;
+
+    if (!this.storageImpl) {
+      throw new Error(`Storage implementation '${this.options.storage}' not found.`);
+    }
+
     this.storageLoader = new DataLoader<K, V>(async keys => {
       if (this.options.disablePersistency || this.options.cache === false) {
         return userLoader.loadMany(keys);
@@ -54,8 +70,8 @@ export class PersistentDataLoader<K, V> implements DataLoader<K, V> {
       let indexed: Record<string, V> = {};
 
       if (!this.options.forceUpdateCache) {
-        const storageKeys = keys.map(k => ({ key: this.makeStorageKey(k) }));
-        const values: KeyValueObj[] = await batchGet(process.env.DATALOADER_TABLE, storageKeys);
+        const storageKeys = keys.map(k => this.makeStorageKey(k));
+        const values: KeyValueObj[] = await this.storageImpl.batchGet(storageKeys);
         indexed = pipe(indexByKey, mapValues)(values);
       }
 
@@ -64,7 +80,7 @@ export class PersistentDataLoader<K, V> implements DataLoader<K, V> {
 
         if (v === null) {
           const resp = await userLoader.load(key);
-          return this.setAndGet(key, resp);
+          return this.storageImpl.set(this.makeStorageKey(key), resp);
         }
 
         return v;
@@ -76,22 +92,6 @@ export class PersistentDataLoader<K, V> implements DataLoader<K, V> {
     return this.options.keyPrefix
       ? `${this.options.keyPrefix}:${this.options.cacheKeyFn(key)}`
       : this.options.cacheKeyFn(key);
-  }
-
-  private async setAndGet(key: K, value: V) {
-    await new DocumentClient().put({
-      TableName: process.env.DATALOADER_TABLE,
-      Item: { key: this.makeStorageKey(key), value },
-    }).promise();
-
-    return value;
-  }
-
-  private del(key: K) {
-    return new DocumentClient().delete({
-      TableName: process.env.DATALOADER_TABLE,
-      Key: { key: this.makeStorageKey(key) },
-    }).promise();
   }
 
   load(key: K) {
@@ -107,7 +107,7 @@ export class PersistentDataLoader<K, V> implements DataLoader<K, V> {
       return this.storageLoader.clear(key).prime(key, val);
     }
 
-    this.setAndGet(key, val).then(v => this.storageLoader.clear(key).prime(key, v));
+    this.storageImpl.set(this.makeStorageKey(key), val).then(v => this.storageLoader.clear(key).prime(key, v));
 
     return this;
   }
@@ -121,7 +121,7 @@ export class PersistentDataLoader<K, V> implements DataLoader<K, V> {
       return this.storageLoader.clear(key);
     }
 
-    this.del(key).then(() => this.storageLoader.clear(key));
+    this.storageImpl.delete(this.makeStorageKey(key)).then(() => this.storageLoader.clear(key));
 
     return this;
   }

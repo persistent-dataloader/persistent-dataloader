@@ -8,6 +8,8 @@ node_js:
 branches:
   only:
     - master
+    - beta
+    - alpha
 
 jobs:
   include:
