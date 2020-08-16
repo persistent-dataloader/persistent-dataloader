@@ -12,8 +12,8 @@
     "build-clean": "rm -rf ./dist/",
     "lint": "eslint . --ext .ts --ignore-path .gitignore",
     "pretest": "npm run lint",
-    "test": "jest",
-    "coverage": "jest --coverage && cat ./coverage/lcov.info | coveralls",
+    "test": "jest --passWithNoTests",
+    "coverage": "npm run test -- --coverage && cat ./coverage/lcov.info | coveralls",
     "prepublishOnly": "npm run build",
     "semantic-release": "semantic-release"
   },
