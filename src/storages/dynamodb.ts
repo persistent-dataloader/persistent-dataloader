@@ -6,7 +6,7 @@ import { DataLoaderStorage } from './storage-abstraction';
 
 const MAX_READ_BATCH_SIZE = 100;
 
-export default class DynamoDBStorage<V = any> implements DataLoaderStorage<V> {
+export default class DynamoDBStorage<V> implements DataLoaderStorage<V> {
   private dynamoDb: DocumentClient;
 
   constructor(private tableName: string) {

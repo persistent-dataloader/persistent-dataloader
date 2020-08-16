@@ -2,7 +2,7 @@ import Bluebird from 'bluebird';
 
 import { DataLoaderStorage } from './storage-abstraction';
 
-export default class InMemoryStorage<V = any> implements DataLoaderStorage<V> {
+export default class InMemoryStorage<V> implements DataLoaderStorage<V> {
   private map: Map<string, V>;
 
   constructor() {
@@ -14,7 +14,7 @@ export default class InMemoryStorage<V = any> implements DataLoaderStorage<V> {
 
     for (const key of keys) {
       if (this.map.has(key)) {
-        entities.push(this.map.get(key));
+        entities.push({ key, value: this.map.get(key)});
       }
     }
 

@@ -22,7 +22,7 @@ export interface PersistentDataLoaderOptions<K, V> extends DataLoader.Options<K,
   /**
    * Persistent DataLoader storage implementation or the name of storage.
    */
-  storage?: DataLoaderStorage | string;
+  storage?: DataLoaderStorage<V> | string;
   /**
    * Database name in storage to be used in case the storage option is storage name string.
    */
@@ -37,7 +37,7 @@ const pickDataloaderOptions = pick([
 
 export class PersistentDataLoader<K, V> implements DataLoader<K, V> {
   private storageLoader: DataLoader<K, V>;
-  private storageImpl: DataLoaderStorage;
+  private storageImpl: DataLoaderStorage<V>;
   private options: PersistentDataLoaderOptions<K, V>;
 
   constructor(batchLoadFn: DataLoader.BatchLoadFn<K, V>, options?: PersistentDataLoaderOptions<K, V>) {
