@@ -1,0 +1,26 @@
+language: node_js
+
+node_js:
+  - 14
+  - 12
+  - 10
+
+branches:
+  only:
+    - master
+
+jobs:
+  include:
+    - stage: release
+      node_js: lts/*
+      script:
+        - npm run semantic-release
+    - stage: coverage
+      node_js: lts/*
+      script:
+        - npm run coverage
+
+stages:
+  - test
+  - coverage
+  - release
