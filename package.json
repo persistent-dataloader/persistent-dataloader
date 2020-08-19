@@ -14,8 +14,7 @@
     "pretest": "npm run lint",
     "test": "jest --passWithNoTests",
     "coverage": "npm run test -- --coverage && cat ./coverage/lcov.info | coveralls",
-    "prepublishOnly": "npm run build",
-    "semantic-release": "semantic-release"
+    "prepublishOnly": "npm run build"
   },
   "repository": {
     "type": "git",
