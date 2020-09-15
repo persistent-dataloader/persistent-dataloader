@@ -3,7 +3,7 @@ import DataLoader from 'dataloader';
 import stringify from 'json-stable-stringify';
 import { indexBy, is, mapObjIndexed, mergeRight, pick, pipe, prop } from 'ramda';
 
-import storages from './storages';
+import { resolveStorage } from './storages';
 import { DataLoaderStorage } from './storages/storage-abstraction';
 
 export interface PersistentDataLoaderOptions<K, V> extends DataLoader.Options<K, V> {
@@ -24,9 +24,9 @@ export interface PersistentDataLoaderOptions<K, V> extends DataLoader.Options<K,
    */
   storage?: DataLoaderStorage<V> | string;
   /**
-   * Database name in storage to be used in case the storage option is storage name string.
+   * Options to be used in case the option `storage` is name string.
    */
-  databaseName?: string;
+  storageOptions?: any;
 }
 
 const pickDataloaderOptions = pick([
@@ -56,7 +56,7 @@ export class PersistentDataLoader<K, V> implements DataLoader<K, V> {
     const indexByKey = indexBy(prop('key')) as (list: KeyValueObj[]) => Record<keyof KeyValueObj, KeyValueObj>;
     const mapValues = mapObjIndexed<KeyValueObj, V>(prop('value'));
 
-    this.storageImpl = typeof this.options.storage === 'string' ? storages(this.options.storage, this.options) : this.options.storage;
+    this.storageImpl = resolveStorage(this.options.storage, this.options.storageOptions);
 
     if (!this.storageImpl) {
       throw new Error(`Storage implementation '${this.options.storage}' not found.`);

@@ -1,7 +1,9 @@
 {
   "name": "persistent-dataloader",
-  "version": "0.0.0-development",
   "description": "Persistent DataLoader to be used as dataloader implementation with saving cache in an external storage",
+  "version": "0.0.0-development",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "files": [
     "dist",
     "package.json",
@@ -51,10 +53,12 @@
     "typescript": "^3.9.7"
   },
   "dependencies": {
-    "aws-sdk": "^2.734.0",
     "bluebird": "^3.7.2",
     "dataloader": "^1.4.0",
     "json-stable-stringify": "^1.0.1",
     "ramda": "^0.27.1"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }
