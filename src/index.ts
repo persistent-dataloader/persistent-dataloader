@@ -6,6 +6,8 @@ import { indexBy, is, mapObjIndexed, mergeRight, pick, pipe, prop } from 'ramda'
 import { resolveStorage } from './storages';
 import { DataLoaderStorage } from './storages/storage-abstraction';
 
+export * from './storages/storage-abstraction';
+
 export interface PersistentDataLoaderOptions<K, V> extends DataLoader.Options<K, V> {
   /**
    * Persistent storage key prefix
